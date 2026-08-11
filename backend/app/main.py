@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.github_auth import router as github_router
 from app.api.ai_review import router as ai_review_router
+from app.api.github_pr import router as github_pr_router
 
 
 app = FastAPI(title="AI Pull Request Reviewer")
+
 
 
 # Allow React frontend to communicate with FastAPI backend
@@ -23,6 +25,8 @@ app.add_middleware(
 
 app.include_router(github_router, prefix="/auth/github")
 app.include_router(ai_review_router, prefix="/ai")
+app.include_router(github_pr_router, prefix="/github")
+
 
 
 @app.get("/")
