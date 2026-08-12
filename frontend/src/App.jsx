@@ -2,38 +2,43 @@ import { useState } from "react";
 import "./App.css";
 
 function App() {
-  const [code, setCode] = useState("");
-  const [review, setReview] = useState("");
+  const [prUrl, setPrUrl] = useState("");
+  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const reviewCode = async () => {
-    if (!code.trim()) {
-      setError("Please enter some code first.");
+  const reviewPullRequest = async () => {
+    if (!prUrl.trim()) {
+      setError("Please enter a GitHub Pull Request URL.");
       return;
     }
 
     setLoading(true);
-    setReview("");
     setError("");
+    setResult(null);
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/ai/review?code=${encodeURIComponent(code)}`,
+        `http://127.0.0.1:8000/github/review-pr?pr_url=${encodeURIComponent(
+          prUrl
+        )}`,
         {
           method: "POST",
+          headers: {
+            Accept: "application/json",
+          },
         }
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Something went wrong");
+        throw new Error(data.detail || "Failed to review Pull Request");
       }
 
-      setReview(data.review);
+      setResult(data);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -41,25 +46,29 @@ function App() {
 
   return (
     <div className="app">
-      <header>
-        <h1>🤖 AI Code Reviewer</h1>
-        <p>Review your Python code using AI</p>
+      <header className="hero">
+        <div className="robot">🤖</div>
+        <h1>AI Pull Request Reviewer</h1>
+        <p>
+          Review your GitHub Pull Request using AI
+        </p>
       </header>
 
-      <main>
-        <div className="editor-section">
-          <h2>Enter Your Code</h2>
+      <main className="container">
+        <section className="review-box">
+          <h2>🔗 Enter GitHub Pull Request</h2>
 
-          <textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Paste your Python code here..."
+          <input
+            type="text"
+            value={prUrl}
+            onChange={(e) => setPrUrl(e.target.value)}
+            placeholder="https://github.com/username/repository/pull/1"
           />
 
-          <button onClick={reviewCode} disabled={loading}>
-            {loading ? "Reviewing..." : "🔍 Review Code"}
+          <button onClick={reviewPullRequest} disabled={loading}>
+            {loading ? "🤖 Reviewing..." : "🔍 Review Pull Request"}
           </button>
-        </div>
+        </section>
 
         {error && (
           <div className="error">
@@ -67,12 +76,45 @@ function App() {
           </div>
         )}
 
-        {review && (
-          <div className="review-section">
-            <h2>📋 AI Review</h2>
+        {result && (
+          <section className="results">
+            <div className="repo-info">
+              <h2>📋 AI Review Results</h2>
 
-            <pre>{review}</pre>
-          </div>
+              <p>
+                <strong>Repository:</strong>{" "}
+                {result.repository}
+              </p>
+
+              <p>
+                <strong>Pull Request:</strong> #{result.pull_request}
+              </p>
+
+              <p>
+                <strong>Title:</strong> {result.title}
+              </p>
+            </div>
+
+            {result.reviews.length === 0 ? (
+              <div className="no-review">
+                ℹ️ No Python files were found to review.
+              </div>
+            ) : (
+              result.reviews.map((item, index) => (
+                <div className="review-card" key={index}>
+                  <h3>🐍 {item.filename}</h3>
+
+                  <div className="review-content">
+                    {item.review.split("\n").map((line, i) => (
+                      <p key={i}>
+                        {line || "\u00A0"}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
         )}
       </main>
     </div>
